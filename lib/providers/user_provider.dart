@@ -5,9 +5,11 @@ import '../models/user_model.dart';
 
 class UserProvider with ChangeNotifier {
   List<AppUser> _users = [];
+  List<NotificationData> _notifications = [];
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   List<AppUser> get users => _users;
+  List<NotificationData> get notifications => _notifications;
 
   Future<void> addUser(AppUser user) async {
     await _dbHelper.insertUser(user);
@@ -19,10 +21,24 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-
-
   Future<void> deleteUser(int uid) async {
     await _dbHelper.deleteUser(uid);
     await fetchUsers();
+  }
+
+  // Notification methods
+  Future<void> addNotification(NotificationData notification) async {
+    await _dbHelper.insertNotification(notification);
+    await fetchNotifications();
+  }
+
+  Future<void> fetchNotifications() async {
+    _notifications = await _dbHelper.fetchNotifications();
+    notifyListeners();
+  }
+
+  Future<void> deleteNotification(int id) async {
+    await _dbHelper.deleteNotification(id);
+    await fetchNotifications();
   }
 }

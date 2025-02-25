@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // ✅ Add this import
 
 class GoogleSignInService {
@@ -27,8 +27,8 @@ class GoogleSignInService {
     }
   }
 
-  // Future<void> signOut() async {
-  //   await _googleSignIn.signOut();
-  //   await _auth.signOut();
-  // }
+  Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+  }
 }

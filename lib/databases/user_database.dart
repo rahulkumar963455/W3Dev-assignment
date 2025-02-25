@@ -11,7 +11,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('user_database.db');
+    _database = await _initDB('app_database.db');
     return _database!;
   }
 
@@ -35,6 +35,15 @@ class DatabaseHelper {
         userprofilepic TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        timestamp TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<int> insertUser(AppUser user) async {
@@ -47,8 +56,26 @@ class DatabaseHelper {
     final result = await db.query('users');
     return result.map((map) => AppUser.fromMap(map)).toList();
   }
+
   Future<int> deleteUser(int uid) async {
     final db = await database;
     return await db.delete('users', where: 'uid = ?', whereArgs: [uid]);
+  }
+
+  // Notification database operations
+  Future<int> insertNotification(NotificationData notification) async {
+    final db = await database;
+    return await db.insert('notifications', notification.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<NotificationData>> fetchNotifications() async {
+    final db = await database;
+    final result = await db.query('notifications');
+    return result.map((map) => NotificationData.fromMap(map)).toList();
+  }
+
+  Future<int> deleteNotification(int id) async {
+    final db = await database;
+    return await db.delete('notifications', where: 'id = ?', whereArgs: [id]);
   }
 }

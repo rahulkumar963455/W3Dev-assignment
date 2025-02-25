@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:my_assignmentt/auth_services/google_signin.dart';
+import 'package:my_assignmentt/screens/show_notifications.dart';
+import 'package:my_assignmentt/screens/sign_in_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../providers/user_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../providers/user_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -10,49 +13,51 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
-  FlutterLocalNotificationsPlugin();
-
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _messageController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeNotifications();
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Logout"),
+          content: Text("Are you sure you want to logout?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+              },
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _logout(context);
+              },
+              child: Text("Logout", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  void _initializeNotifications() {
-    const AndroidInitializationSettings androidInitSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+  Future<void> _logout(BuildContext context) async {
+    // Get user provider
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    final InitializationSettings initSettings =
-    InitializationSettings(android: androidInitSettings);
+    // Delete all users from the database
 
-    _notificationsPlugin.initialize(initSettings);
-  }
+    // Clear SharedPreferences login state
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
 
-  Future<void> _sendNotification() async {
-    const AndroidNotificationDetails androidDetails =
-    AndroidNotificationDetails(
-      'channel_id',
-      'Local Notifications',
-      importance: Importance.high,
-      priority: Priority.high,
+    // Sign out from Google
+    await GoogleSignInService().signOut();
+
+    // Navigate to SignInScreen and clear navigation history
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => SignInScreen()),
+          (route) => false, // Remove all previous screens from the stack
     );
-
-    const NotificationDetails details =
-    NotificationDetails(android: androidDetails);
-
-    await _notificationsPlugin.show(
-      0,
-      _titleController.text,
-      _messageController.text,
-      details,
-    );
-
-    _titleController.clear();
-    _messageController.clear();
   }
 
   @override
@@ -61,6 +66,17 @@ class _HomeScreenState extends State<HomeScreen> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          title: Text("Screens"),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.notifications),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ShowNotificationScreen()),
+                );
+              },
+            ),
+          ],
           bottom: const TabBar(
             indicatorColor: Colors.white,
             tabs: [
@@ -72,12 +88,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: TabBarView(
           children: [
-            Center(child: Text("Home Screen", style: TextStyle(fontSize: 24))),
+            SettingsScreen(),
             ProfileScreen(),
-            SettingsScreen(
-              titleController: _titleController,
-              messageController: _messageController,
-              sendNotification: _sendNotification,
+            Container(
+              margin: EdgeInsets.only(left: 10, top: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextButton(
+                    onPressed: () => _showLogoutDialog(context),
+                    child: Text("Logout", style: TextStyle(fontSize: 20)),
+                  ),
+                  SizedBox(height: 20),
+                  Text("Help Us", style: TextStyle(fontSize: 20)),
+                ],
+              ),
             ),
           ],
         ),
@@ -94,15 +119,15 @@ class ProfileScreen extends StatelessWidget {
       builder: (context, userProvider, child) {
         final users = userProvider.users;
         if (users.isEmpty) {
-          return Center(
-              child: Text("No user found", style: TextStyle(fontSize: 18)));
+          return Center(child: Text("No user found", style: TextStyle(fontSize: 18)));
         }
 
         final user = users.last;
 
-        return Center(
+        return Container(
+          margin: EdgeInsets.only(top: 30),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
                 radius: 50,
@@ -110,11 +135,10 @@ class ProfileScreen extends StatelessWidget {
                     ? NetworkImage(user.userprofilepic)
                     : AssetImage('assets/default_profile.png') as ImageProvider,
               ),
-              SizedBox(height: 10),
-              Text(user.username,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              Text(user.useremail,
-                  style: TextStyle(fontSize: 18, color: Colors.grey)),
+              SizedBox(height: 20),
+              Text(user.username, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              SizedBox(height: 20),
+              Text(user.useremail, style: TextStyle(fontSize: 18, color: Colors.grey)),
             ],
           ),
         );
@@ -123,37 +147,49 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-// Settings Screen Widget (Send Local Notification)
+// Settings Screen Widget
 class SettingsScreen extends StatelessWidget {
-  final TextEditingController titleController;
-  final TextEditingController messageController;
-  final VoidCallback sendNotification;
-
-  SettingsScreen({
-    required this.titleController,
-    required this.messageController,
-    required this.sendNotification,
-  });
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           TextField(
-            controller: titleController,
-            decoration: InputDecoration(labelText: "Notification Title"),
+            controller: _titleController,
+            decoration: InputDecoration(
+              labelText: "Notification Title",
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+            ),
           ),
-          SizedBox(height: 10),
+          SizedBox(height: 30),
           TextField(
-            controller: messageController,
-            decoration: InputDecoration(labelText: "Notification Message"),
+            controller: _messageController,
+            decoration: InputDecoration(
+              labelText: "Notification Message",
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(5)),
+            ),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 40),
           ElevatedButton(
-            onPressed: sendNotification,
+            onPressed: () {
+              final title = _titleController.text;
+              final message = _messageController.text;
+              if (title.isNotEmpty && message.isNotEmpty) {
+                final notification = NotificationData(
+                  title: title,
+                  message: message,
+                  timestamp: DateTime.now().toString(),
+                );
+                Provider.of<UserProvider>(context, listen: false).addNotification(notification);
+                _titleController.clear();
+                _messageController.clear();
+              }
+            },
             child: Text("Send Notification"),
           ),
         ],

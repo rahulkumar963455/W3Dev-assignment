@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:my_assignmentt/screens/home_screen.dart';
 import 'package:my_assignmentt/screens/sign_in_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,12 +15,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _navigateToNextScreen();
+  }
 
-    // Navigate to the home screen after a delay
+  Future<void> _navigateToNextScreen() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    // Navigate to the appropriate screen after 3 seconds
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) =>  HomeScreen()),
+        MaterialPageRoute(builder: (context) => isLoggedIn ? HomeScreen() : SignInScreen()),
       );
     });
   }
