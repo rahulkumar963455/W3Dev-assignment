@@ -1,21 +1,19 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
-    //id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") // Firebase Google Services
 }
-
+apply(plugin = "com.google.gms.google-services")
 android {
     namespace = "com.example.my_assignmentt"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34 // Latest stable version
     ndkVersion = "26.1.10909125"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true // Enable Java 8+ desugaring
     }
 
     kotlinOptions {
@@ -23,20 +21,15 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.my_assignmentt"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        targetSdk = 33
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -47,5 +40,22 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") // Adds the required dependency
+    // AndroidX Core
+    implementation("androidx.core:core-ktx:1.12.0")
+
+    // Firebase Messaging (Push Notifications)
+    implementation("com.google.firebase:firebase-messaging-ktx:23.3.1")
+
+    // Core Library Desugaring (Java 8+ Features)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Glide (For Image Loading)
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+
+    // WorkManager (For Background Tasks)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Local Notifications
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 }

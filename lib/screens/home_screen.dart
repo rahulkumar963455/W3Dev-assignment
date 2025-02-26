@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:my_assignmentt/auth_services/google_signin.dart';
 import 'package:my_assignmentt/screens/show_notifications.dart';
 import 'package:my_assignmentt/screens/sign_in_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 import '../models/user_model.dart';
 import '../providers/user_provider.dart';
 
@@ -176,24 +178,55 @@ class SettingsScreen extends StatelessWidget {
           ),
           SizedBox(height: 40),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final title = _titleController.text;
               final message = _messageController.text;
+
               if (title.isNotEmpty && message.isNotEmpty) {
                 final notification = NotificationData(
                   title: title,
                   message: message,
                   timestamp: DateTime.now().toString(),
                 );
-                Provider.of<UserProvider>(context, listen: false).addNotification(notification);
+
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+                try {
+                  await userProvider.addNotification(notification); // Ensure this saves to the DB
+                  print("Notification saved successfully!");
+                } catch (e) {
+                  print("Error saving notification: $e");
+                }
+
+                await _sendNotification(title, message);
+
                 _titleController.clear();
                 _messageController.clear();
               }
             },
+
             child: Text("Send Notification"),
           ),
         ],
       ),
     );
   }
+  Future<void> _sendNotification(String title, String message) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'channel_id',
+      'channel_name',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const NotificationDetails notificationDetails =
+    NotificationDetails(android: androidDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      0, // Notification ID
+      title,
+      message,
+      notificationDetails,
+    );
+  }
+
 }
